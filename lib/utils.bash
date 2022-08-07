@@ -781,6 +781,12 @@ with_shim_executable() {
 
     with_plugin_env "$plugin_name" "$full_version" run_within_env
     return $?
+  else
+    read -r executable_path <<< "$(which -a "$shim_name" | tr ':' '\n' | grep -v asdf)"
+    if [[ -x $executable_path ]]; then
+      "$shim_exec" "x" "x" "$executable_path"
+      return $?
+    fi
   fi
 
   (
