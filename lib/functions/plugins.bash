@@ -28,15 +28,13 @@ plugin_list_command() {
         printf "%s" "$plugin_name"
 
         if [ -n "$show_repo" ]; then
-          printf "\t%s" "$(git --git-dir "$plugin_path/.git" remote get-url origin 2>/dev/null)"
+          printf "\t%s" "$(get_plugin_remote_url "$plugin_name")"
         fi
 
         if [ -n "$show_ref" ]; then
-          local branch
-          local gitref
-          branch=$(git --git-dir "$plugin_path/.git" rev-parse --abbrev-ref HEAD 2>/dev/null)
-          gitref=$(git --git-dir "$plugin_path/.git" rev-parse --short HEAD 2>/dev/null)
-          printf "\t%s\t%s" "$branch" "$gitref"
+          printf "\t%s\t%s" \
+            "$(get_plugin_remote_branch "$plugin_name")" \
+            "$(get_plugin_remote_gitref "$plugin_name")"
         fi
 
         printf "\n"
@@ -44,7 +42,7 @@ plugin_list_command() {
     ) | awk '{ if (NF > 1) { printf("%-28s", $1) ; $1="" }; print $0}'
   else
     display_error 'No plugins installed'
-    exit 1
+    exit 0
   fi
 }
 
@@ -65,7 +63,7 @@ plugin_add_command() {
   if [ -n "$2" ]; then
     local source_url=$2
   else
-    initialize_or_update_repository
+    initialize_or_update_plugin_repository
     local source_url
     source_url=$(get_plugin_source_url "$plugin_name")
   fi
@@ -78,11 +76,11 @@ plugin_add_command() {
   local plugin_path
   plugin_path=$(get_plugin_path "$plugin_name")
 
-  mkdir -p "$(asdf_data_dir)/plugins"
+  [ -d "$(asdf_data_dir)/plugins" ] || mkdir -p "$(asdf_data_dir)/plugins"
 
   if [ -d "$plugin_path" ]; then
-    display_error "Plugin named $plugin_name already added"
-    exit 2
+    printf '%s\n' "Plugin named $plugin_name already added"
+    exit 0
   else
     asdf_run_hook "pre_asdf_plugin_add" "$plugin_name"
     asdf_run_hook "pre_asdf_plugin_add_${plugin_name}"
@@ -142,6 +140,7 @@ update_plugin() {
   local prev_ref=
   local post_ref=
   {
+    printf "Location of %s plugin: %s\n" "$plugin_name" "$plugin_path"
     asdf_run_hook "pre_asdf_plugin_update" "$plugin_name"
     asdf_run_hook "pre_asdf_plugin_update_${plugin_name}"
 

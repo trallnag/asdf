@@ -17,7 +17,7 @@ version_command() {
   local file_name
   local file
 
-  file_name="$(version_file_name)"
+  file_name="$(asdf_tool_versions_filename)"
 
   if [ "$cmd" = "global" ]; then
     file="$HOME/$file_name"
@@ -60,9 +60,16 @@ version_command() {
     resolved_versions+=("$version")
   done
 
-  if [ -f "$file" ] && grep "^$plugin_name " "$file" >/dev/null; then
-    sed -i.bak -e "s|^$plugin_name .*$|$plugin_name ${resolved_versions[*]}|" "$file"
-    rm -f "$file".bak
+  if [ -f "$file" ] && grep -q "^$plugin_name " "$file"; then
+    local temp_dir
+    temp_dir=${TMPDIR:-/tmp}
+
+    local temp_tool_versions_file
+    temp_tool_versions_file=$(mktemp "$temp_dir/asdf-tool-versions-file.XXXXXX")
+
+    cp -f "$file" "$temp_tool_versions_file"
+    sed -e "s|^$plugin_name .*$|$plugin_name ${resolved_versions[*]}|" "$temp_tool_versions_file" >"$file"
+    rm -f "$temp_tool_versions_file"
   else
     # Add a trailing newline at the end of the file if missing
     [[ -f "$file" && -n "$(tail -c1 "$file")" ]] && printf '\n' >>"$file"

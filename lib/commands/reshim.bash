@@ -11,14 +11,14 @@ remove_shim_for_version() {
   local count_installed
   count_installed=$(list_installed_versions "$plugin_name" | wc -l)
 
-  if ! grep -x "# asdf-plugin: $plugin_name $version" "$shim_path" >/dev/null 2>&1; then
+  if ! grep -x "# asdf-plugin: $plugin_name $version" "$shim_path" &>/dev/null; then
     return 0
   fi
 
   sed -i.bak -e "/# asdf-plugin: $plugin_name $version"'$/d' "$shim_path"
   rm "$shim_path".bak
 
-  if ! grep "# asdf-plugin:" "$shim_path" >/dev/null ||
+  if ! grep -q "# asdf-plugin:" "$shim_path" ||
     [ "$count_installed" -eq 0 ]; then
     rm -f "$shim_path"
   fi

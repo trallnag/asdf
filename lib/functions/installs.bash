@@ -25,15 +25,27 @@ install_command() {
 }
 
 get_concurrency() {
-  if command -v nproc >/dev/null 2>&1; then
-    nproc
-  elif command -v sysctl >/dev/null 2>&1 && sysctl hw.ncpu >/dev/null 2>&1; then
-    sysctl -n hw.ncpu
-  elif [ -f /proc/cpuinfo ]; then
-    grep -c processor /proc/cpuinfo
+  local asdf_concurrency=
+
+  if [ -n "$ASDF_CONCURRENCY" ]; then
+    asdf_concurrency="$ASDF_CONCURRENCY"
   else
-    printf "1\n"
+    asdf_concurrency=$(get_asdf_config_value 'concurrency')
   fi
+
+  if [ "$asdf_concurrency" = 'auto' ]; then
+    if command -v nproc &>/dev/null; then
+      asdf_concurrency=$(nproc)
+    elif command -v sysctl &>/dev/null && sysctl hw.ncpu &>/dev/null; then
+      asdf_concurrency=$(sysctl -n hw.ncpu)
+    elif [ -f /proc/cpuinfo ]; then
+      asdf_concurrency=$(grep -c processor /proc/cpuinfo)
+    else
+      asdf_concurrency="1"
+    fi
+  fi
+
+  printf "%s\n" "$asdf_concurrency"
 }
 
 install_one_local_tool() {
@@ -195,7 +207,7 @@ install_tool_version() {
         export ASDF_INSTALL_PATH=$install_path
         # shellcheck disable=SC2030
         export ASDF_DOWNLOAD_PATH=$download_path
-        mkdir "$download_path"
+        mkdir -p "$download_path"
         asdf_run_hook "pre_asdf_download_${plugin_name}" "$full_version"
         "${plugin_path}"/bin/download
       )
@@ -224,8 +236,13 @@ install_tool_version() {
     if [ $install_exit_code -eq 0 ] && [ $download_exit_code -eq 0 ]; then
       # Remove download directory if --keep-download flag or always_keep_download config setting are not set
       always_keep_download=$(get_asdf_config_value "always_keep_download")
-      if [ ! "$keep_download" = "true" ] && [ ! "$always_keep_download" = "yes" ] && [ -d "$download_path" ]; then
-        rm -r "$download_path"
+      if [ ! "$keep_download" = "true" ] && [ ! "$always_keep_download" = "yes" ]; then
+        if [ -d "$download_path" ]; then
+          rm -r "$download_path"
+        else
+          printf '%s\n' "asdf: Warn: You have configured asdf to preserve downloaded files (with always_keep_download=yes or --keep-download). But" >&2
+          printf '%s\n' "asdf: Warn: the current plugin ($plugin_name) does not support that. Downloaded files will not be preserved." >&2
+        fi
       fi
 
       reshim_command "$plugin_name" "$full_version"

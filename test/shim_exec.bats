@@ -206,6 +206,8 @@ teardown() {
   [ "$output" = "System" ]
 }
 
+# NOTE: The name of this test is linked to a condition in `test_helpers.bash. See
+# the 'setup_asdf_dir' function for details.
 @test "shim exec should use path executable when specified version path:<path>" {
   run asdf install dummy 1.0
 
@@ -331,7 +333,6 @@ teardown() {
   chmod +x "$PROJECT_DIR/sys/dummy"
 
   run env "PATH=$PATH:$PROJECT_DIR/sys" "$ASDF_DIR/shims/dummy"
-  echo "$status $output"
   [ "$output" = "$ASDF_DIR/shims/dummy" ]
 }
 

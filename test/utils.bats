@@ -43,7 +43,6 @@ teardown() {
   run get_download_path foo version "1.0.0"
   [ "$status" -eq 0 ]
   download_path=${output#"$HOME/"}
-  echo "$download_path"
   [ "$download_path" = ".asdf/downloads/foo/1.0.0" ]
 }
 
@@ -460,4 +459,17 @@ EOF
   run with_shim_executable test-dash callback
   [ "$status" -eq 0 ]
   [ "$output" = "$message" ]
+}
+
+@test "prints warning if .tool-versions file has carriage returns" {
+  ASDF_CONFIG_FILE="$BATS_TEST_TMPDIR/asdfrc"
+  cat >"$ASDF_CONFIG_FILE" <<<$'key2 = value2\r'
+
+  [[ "$(get_asdf_config_value "key1" 2>&1)" = *"contains carriage returns"* ]]
+}
+
+@test "prints if asdfrc config file has carriage returns" {
+  cat >".tool-versions" <<<$'nodejs 19.6.0\r'
+
+  [[ "$(find_tool_versions 2>&1)" = *"contains carriage returns"* ]]
 }
